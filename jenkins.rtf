@@ -1,0 +1,211 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang2057{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fmodern\fprq1\fcharset0 Courier New;}}
+{\colortbl ;\red255\green255\blue0;\red0\green0\blue255;\red255\green0\blue0;\red0\green0\blue0;\red0\green77\blue187;}
+{\*\generator Riched20 10.0.22621}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\highlight1\f0\fs36\lang9 Jenkins set-up for ubuntu:\highlight0\par
+\tab Create a aws instance  --- ubuntu --- 22 --- n/w \tab stng : allow http , https ---  edit n/w setting --- add \tab security grp rule : all traffic , anywhere --- launch\par
+\tab sudo -i\par
+
+\pard\li720\sa200\sl276\slmult1 open browser ---  type jenkins download ({{\field{\*\fldinst{HYPERLINK www.jenkins.io }}{\fldrslt{www.jenkins.io\ul0\cf0}}}}\f0\fs36 ) --- scroll down in stable (LTS) section ---clock on ubuntu in stable (LTS) section look for java installation steps in copy and paste entire commands --- \par
+scroll up and copy ubuntu Long Term Support release commands --- paste in aws cli\par
+
+\pard\sa200\sl276\slmult1\tab ---> systemctl status jenkins\par
+\tab ---> go to instance --- copy public-ip --- open \tab\tab\tab browser: \tab public-ip of instance:8080\par
+\tab ---> copy the path from unlock jenkins page --- go \tab\tab to instance terminal --- cat paste-path\par
+\tab\tab copy passwrd --- paste password --- connect --- \tab\tab install plugins --- create first admin user --- \tab\tab\tab note instance configuration --- save and finish\par
+---------------------------------------------------------------------------\par
+\highlight1 Sample Project:\highlight0\par
+New item -- In jenkins new item means a job or project \tab\tab      or item or  task \par
+\tab\tab      Click new item --- enter name --- \tab\tab\tab\tab      freestyle --- there are many sections like \tab\tab\tab      general ,scm , built trigger , built env etc..\par
+\tab\tab      Build steps --- execute shell --- echo " hello \tab\tab\tab hi" --- save --- apply --- click built now --- \tab\tab\tab console output \par
+---------------------------------------------------------------------------\par
+\highlight1 Continuous Download :\highlight0\par
+\tab jenkins dashboard --- new item --- name:clone --- \tab freestyle ---ok  \par
+\par
+In build trigger module choose the options wisely:\par
+\cf3 Every minute :\cf0\par
+job --- configuration --- build trigger --- built periodically ? --- schedule ?  ( browser : cron schedule) : *****--- save\par
+\cf3 Only when changes pushed to repo:\cf0\par
+job --- configuration --- build trigger --- poll SCM ---  schedule: *****--- save \par
+\cf3 Only when changes pushed to repo:\par
+\cf0 job --- configuration --- build trigger --- github hook trigger for GITScm polling  --- apply --- save \par
+\cf3 go to github and make few changes:\cf0\par
+github --- setting of project --- webhooks(left hand side) --- add webhooks --- payload url:                         https: //123.123.123.13:8080 /github-webhook/\par
+--- which event would u like to trigger this webhook ? : just the push event --- add webhook\par
+---------------------------------------------------------------------------\par
+\highlight1 Build a pipeline using jenkins, maven and git:\highlight0\par
+So how will our pipeline look ?\par
+\tab clone git ---> compile job ---> code review ---> unit testing ---> package ---> deploy \par
+\cf3 Clone job :\cf0\par
+{\fs28{\field{\*\fldinst{HYPERLINK https://github.com/Become-DevOps/DevOpsClassCodes.git }}{\fldrslt{https://github.com/Become-DevOps/DevOpsClassCodes.git\ul0\cf0}}}}\f0\fs36\par
+\cf3 Compile job:\par
+\tab\cf4 jenkins dashboard --- manage jenkins --- tools --- scroll down --- maven installation: add maven --- name: my-maven --- install automatically :3.9.9 --- save\cf0\par
+\tab jenkins --- new item --- freestyle --- scm --- git --- repo url --- build step: invoke top level maven targets --- maven version:choose --- goals : (commands) compile --- save --- build now\par
+\cf3 Code review job:\cf0\par
+\tab jenkins --- new item --- freestyle --- scm --- git --- repo url --- build steps : invoke top level maven targets --- goals : pmd:pmd --- save  --- build\par
+dashboard --- manage jenkins --- plugin --- available plugin --- "warning" ---install ---dashboard ---  code review job --- configure --- post build Actions --- record compiler warning and static analytics result --- tool : pmd --- report file pattern : **/pmd.xml --- save --- build --- open job --- pmd warning --- trend report  \par
+\cf3 Test job:\cf0\par
+\tab jenkins --- new item --- freestyle --- scm --- git --- repo url --- build steps : invoke top level maven targets --- goals : test--- save  --- build\par
+\tab test job --- configure --- post build actions --- publish JUnit test result report --- test report xml : target/surefire reports/*.xml (path where file is present in respective to wrkspace) ---  save --- refresh --- latest test results \cf3 Package job:\cf0\par
+\tab jenkins --- new item --- freestyle --- scm --- git --- repo url --- build steps : invoke top level maven targets --- goals : package --- save  --- build\par
+\tab (once package done it gives u a war file )\par
+---------------------------------------------------------------------------\par
+now all these jobs are not interlinked where in industry we need it to be interlinked . This link b/w jobs can be done in 2 ways \par
+\tab 1. Upstream \par
+\tab 2. Downstream\par
+\cf3 Link job using Upstream: \par
+\tab\cf4 jenkins dashboard --- clone job --- configure --- post build actions --- build other project : --- project to build : compile--- apply --- save\cf3\par
+\tab\cf4 jenkins dashboard --- compile job --- configure --- post build actions --- build other project : --- project to build : code review  --- apply --- save\par
+\tab code review --- configure --- post build actions --- build other project : --- project to build : unit testing --- apply --- save\par
+\cf0\tab\cf4 unit testing --- configure --- post build actions --- build other project : --- project to build : package --- apply --- save\par
+make changes im git hub to see the Stream\par
+\cf3 Link job using Downstream: \par
+\tab\cf4 compile--- configure --- build trigger: build after other projects are build: clone--- apply --- save\par
+\cf0\tab\cf4 code review --- configure --- build trigger: build after other projects are build: compile--- apply --- save\par
+\tab unit testing --- configure --- build trigger: build after other projects are build: code review--- apply --- save\par
+\cf0\tab\cf4 package --- configure --- build trigger: build after other projects are build: unit testing--- apply --- save\par
+---------------------------------------------------------------------------\par
+\cf3 Pipeline plugin :\cf4\par
+\cf3 Pipeline plugin :\cf4\par
+\tab To see all above jobs running in a pipeline format install pipeline plugin\par
+\tab Dashboard --- manage jenkins --- plugins --- available plugin --- Build pipeline --- install --- go back to top page\par
+Dashboard --- new view (+) --- build pipeline view --- name:enter --- create --- upstram/downstream config : 1. clone --- ok  \par
+---------------------------------------------------------------------------\par
+\cf3 Email notification to team:\cf4\par
+\tab If a jobn is failed and u need to send email to developer \par
+\tab Dashboard --- manage jenkins --- system --- email notification --- SMTP Server : smtp.gmail.com---  default user email suffix : @gmail.com --- advanced --- \par
+Use SMTP Authentication : username : your_email@gmail.com  --- Password : vzig mxwj ogos qrwz--- click use ssl --- SMTP Port : 465 --- click test configuration by sending test emails : test email receipient : enter ur email  --- click test configuration\par
+\cf5 Error occurs to resolve the error we need to authenticate jenkins with gmail\par
+\tab\cf4 go to ur gmail account --- security --- step verification : on --- get started --- phne number : text msg --- verify --- go to search tab and search for : app passwords: name : jenkins --- create --- copy password (vzig mxwj ogos qrwz) --- paste in \par
+Use SMTP Authentication : username : your_email@gmail.com  --- Password : vzig mxwj ogos qrwz--- Test configuration --- save\par
+------------------------------------------------------------------------------\par
+\cf3 Configure email to job:\cf4\par
+\tab Any job --- configure --- post-build actions --- email-notification --- receipient : enter email --- check send email for every unstable build --- save \par
+\tab now make few error in certain job and try to build , check email  \par
+\cf0 ---------------------------------------------------------------------------\par
+\cf3 Deploying a project in Tomcat Server:\cf4\par
+
+\pard\nowidctlpar\tab\tab\cf0\f1\fs28\lang16393 qa -- ubuntu 22 version --install apache tomcat 9\par
+\par
+install apache:\par
+\par
+---> sudo apt-cache search tomcat\par
+\par
+---> sudo apt-get install -y tomcat9 tomcat9-admin  (or)\par
+\par
+---> sudo apt-get install -y tomcat9\par
+\par
+---> sudo apt-get install -y tomcat9-admin\par
+\par
+---> sudo systemctl start tomcat9\par
+\par
+---> sudo systemctl enable tomcat9\par
+\par
+---> qa_public_ip:8080\par
+\par
+user in tomcat qa and production server:\par
+Linux command : \par
+\par
+---> cd /etc/tomcat9/\par
+\par
+---> ls\par
+\par
+you will find file tomcat-users.xml\par
+open the file \par
+\par
+---> sudo nano tomcat-users.xml\par
+\par
+on top of end tag enter user details\par
+\par
+\par
+\par
+<!-- Administrator role with full access -->\par
+    <role rolename="manager-gui"/>\par
+    <role rolename="manager-script"/>\par
+    <role rolename="manager-status"/>\par
+    <role rolename="admin-gui"/>\par
+\par
+    <!-- Admin user with roles -->\par
+\par
+    <user username="admin" password="password" roles="manager-gui,manager-script,manager-status,admin-gui"/>\par
+\par
+    <user username="sree" password="12345" roles="manager-gui,manager-script,manager-status,admin-gui"/>\par
+\par
+\par
+restart tomcat\par
+\par
+---> sudo service tomcat9 restart\par
+\par
+now the configuration part is over check wether Jenkins is up and running. \par
+---> systemctl status jenkins\par
+\par
+run Jenkins \par
+
+\pard\sa200\sl276\slmult1 ---> ipaddress:8080 \par
+\f0\fs36\lang9 ---------------------------------------------------------------------------\par
+
+\pard\nowidctlpar\highlight1\f1\fs28\lang16393 CD:Continuous Delivery\highlight0\par
+\par
+You need to deploy the artifact to qa server\par
+\par
+for this we need to install a plugin called " deploy to container " plugin\par
+\par
+--- dashboard --- manage Jenkins --- plugins --- available plugins --- deploy to container --- install --- goback --- job --- configure --- postbuild activity --- deploy war to a container --- deploy war or ear to a container : ( sometimes multiple war files will be created so to deploy all war files) **/*.war --- context path : qaenv ( take note of this context path ) --- Add Container : Tomcat 9x remote --- tomcat credentials:\par
+add --- Jenkins ---username: --- password : --- tomcat url :{{\field{\*\fldinst{HYPERLINK http://private-ip_qa:8080 }}{\fldrslt{http://private-ip_qa:8080\ul0\cf0}}}}\f1\fs28   (qa servers)--- apply --- save\par
+
+\pard\sa200\sl276\slmult1\f0\fs36\lang9\par
+--- \f1\fs28\lang16393 public_ip_Qa_server:8080/qaenv \f0\fs36\lang9\par
+\par
+\cf3 Pipeline project:\par
+\tab\cf0 Dashboard --- manage jenkins --- plugins --- \highlight1 pipeline stage view\highlight0  --- install --- go back to top page\cf4\par
+\tab Dashboard --- new item --- name: enter --- pipeline --- ok --- pipeline : \par
+\par
+choose hello world and understand stages---build---view\par
+configure --- pipeline syntax --- Sample step: git:git --- URL:paste --- generate pipeline script --- copy and paste inside the step block\par
+\cf0\b\fs28 pipeline \{\par
+    agent any\par
+    stages \{\par
+        stage('Clone') \{\par
+            steps \{\par
+                echo 'Clone Stage'\par
+                git '{{\field{\*\fldinst{HYPERLINK https://github.com/Become-DevOps/DevOpsClassCodes.git }}{\fldrslt{https://github.com/Become-DevOps/DevOpsClassCodes.git\ul0\cf0}}}}\f0\fs28 '\par
+            \}\par
+        \}\par
+        stage('Compile') \{\par
+            steps \{\par
+                echo 'Compile job '\par
+                sh 'mvn compile'\par
+            \}\par
+        \}\par
+        stage('Code-review') \{\par
+            steps \{\par
+                echo 'Code-review job '\par
+                sh 'mvn pmd:pmd'\par
+            \}\par
+            post\{\par
+                success\{\par
+                    recordIssues sourceCodeRetention: 'LAST_BUILD', tools: [pmdParser(pattern: '**/pmd.xml')]\par
+                \}\par
+            \}\par
+        \}\par
+        stage('Test job') \{\par
+            steps \{\par
+                echo 'Test job '\par
+                sh 'mvn test'\par
+            \}\par
+            post\{\par
+                success\{\par
+                    junit stdioRetention: '', testResults: 'target/surefire-reports/*.xml'\par
+                \}\par
+            \}\par
+        \}\par
+        stage('Package job') \{\par
+            steps \{\par
+                echo 'Test job '\par
+                sh 'mvn package'\par
+            \}\par
+        \}\par
+\b0\par
+\fs36\par
+\fs22\par
+}
+ 
